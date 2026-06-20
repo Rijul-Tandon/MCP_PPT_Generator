@@ -1,0 +1,63 @@
+﻿# Update this single file for each new referral analysis project.
+# Historical decks are used only for style, structure, and slide-master reference.
+# Do not rely on the model to infer missing business facts.
+# Put every approved number, funnel detail, and recommendation here.
+# The `Template Deck` can be a filename from `reference_decks/` or a full path to a PPTX file.
+# Set `Generate JSON Output` to true only when you want to keep editable content_v1 and trace sidecar files.
+
+## Project Name
+Takeda NT1 Referral Strategy Draft
+
+## Client / Brand / Indication
+Takeda / NT1 / Narcolepsy Type 1
+
+## Use-Case Type
+Referral Analysis
+
+## Audience
+Internal analytics and business-development stakeholders
+
+## Slide Count Target
+8
+
+## Template Deck
+2026-05-14 NT1 Referral Network Analysis - Insights & Recommendations v1.pptx
+
+## Generate JSON Output
+false
+
+## Presentation Objective
+Create a first-pass business-development storyline that uses current project facts while matching the client's slide-master style.
+
+## Current Business Question
+The team wants a reusable workflow for drafting referral-analysis presentations without copying stale claims from prior decks. The deck should show how to preserve executive storytelling and client formatting while using only approved facts from the current project.
+
+## Approved Facts and Numbers
+- This sample context is intentionally light and should be replaced for real engagements.
+- All numeric claims in the final deck must be supplied in this file.
+- The current sample is only intended to prove the workflow end to end.
+
+## Patient Funnel or Workflow Summary
+- Patient symptoms trigger the initial care-seeking journey.
+- Referral hand-offs guide movement from generalist to specialist care.
+- Business-development teams need to understand where the current workflow creates leakage or delay.
+
+## Analytical Outputs Available
+- Historical referral decks for style analysis only.
+- A local CLI that drafts content_v1 before generating PowerPoint when requested.
+- Reference slide layouts from the client deck that should influence output formatting.
+
+## Draft Recommendations or Hypotheses
+- Require a fresh context.txt for every project.
+- Separate style references from claim-bearing project inputs.
+- Review content_v1 only when a user explicitly wants editable intermediate output.
+
+## Slides to Include or Avoid
+Include an executive summary, workflow slide, analytical insights, and recommendations. Avoid copying exact claims from historical referral decks.
+
+## Constraints / Caveats
+- This starter file does not contain approved project metrics.
+- Any client-facing deck should replace sample text with validated facts.
+
+## Additional Instructions
+Use a different layout feel across title, agenda, executive summary, workflow, and recommendation slides. Stay close to the Takeda client template look and feel.

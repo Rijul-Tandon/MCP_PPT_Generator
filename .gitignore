@@ -1,0 +1,6 @@
+﻿bd_venv/
+output/
+.tmp/
+.env
+__pycache__/
+*.pyc

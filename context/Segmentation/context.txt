@@ -1,0 +1,54 @@
+﻿# Update this file for each new segmentation project.
+# Keep all approved facts in this one file.
+
+## Project Name
+[Enter the project title]
+
+## Client / Brand / Indication
+[Enter the client, therapy area, and indication]
+
+## Use-Case Type
+Segmentation
+
+## Audience
+[Who is this deck for?]
+
+## Slide Count Target
+8
+
+## Template Deck
+[Optional: a PPTX filename from reference_decks/ or full path]
+
+## Generate JSON Output
+false
+
+## Presentation Objective
+[What decision or discussion should this deck enable?]
+
+## Current Business Question
+[Describe the current segmentation question in 3-6 sentences]
+
+## Approved Facts and Numbers
+- [Approved metric 1]
+- [Approved metric 2]
+
+## Patient Funnel or Workflow Summary
+- [Relevant workflow step or segment journey 1]
+- [Relevant workflow step or segment journey 2]
+
+## Analytical Outputs Available
+- [Segmentation output 1]
+- [Segmentation output 2]
+
+## Draft Recommendations or Hypotheses
+- [Recommendation 1]
+- [Recommendation 2]
+
+## Slides to Include or Avoid
+[Must-have slides or topics to avoid]
+
+## Constraints / Caveats
+- [Data limitation or confidence caveat]
+
+## Additional Instructions
+[Formatting or storytelling instructions]
