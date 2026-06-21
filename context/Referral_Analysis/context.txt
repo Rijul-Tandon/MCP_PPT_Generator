@@ -1,12 +1,14 @@
-﻿# Update this single file for each new referral analysis project.
-# Historical decks are used only for style, structure, and slide-master reference.
-# Do not rely on the model to infer missing business facts.
-# Put every approved number, funnel detail, and recommendation here.
+﻿# Update this file for each new referral-analysis project.
+# Historical decks are for style, structure, talking-header patterns, slide-master reference, figure placement, and storytelling only.
+# Do not infer or reuse business facts from previous presentations.
+# All approved metrics, analyses, tables, and recommendations must come from this file or the Excel files in `excel_context/`.
 # The `Template Deck` can be a filename from `reference_decks/` or a full path to a PPTX file.
-# Set `Generate JSON Output` to true only when you want to keep editable content_v1 and trace sidecar files.
+# Set `Generate JSON Output` to `true` only when editable `content_v1` and trace files are required.
+# Client-ready rule: generated slides should read like a real presentation draft, not a wireframe. Avoid filler text, random placeholders, and generic slide copy.
+# Quality rule: use the talking-header style, section flow, and layout discipline visible in the Takeda reference decks.
 
 ## Project Name
-Takeda NT1 Referral Strategy Draft
+Takeda NT1 Cross-State Referral Analysis Draft
 
 ## Client / Brand / Indication
 Takeda / NT1 / Narcolepsy Type 1
@@ -15,7 +17,7 @@ Takeda / NT1 / Narcolepsy Type 1
 Referral Analysis
 
 ## Audience
-Internal analytics and business-development stakeholders
+Internal Analytics & Business Development Stakeholders
 
 ## Slide Count Target
 8
@@ -27,37 +29,67 @@ Internal analytics and business-development stakeholders
 false
 
 ## Presentation Objective
-Create a first-pass business-development storyline that uses current project facts while matching the client's slide-master style.
+Create a first-pass referral-analysis presentation that follows the Takeda client template while using only approved project-specific facts from the current context and Excel files.
 
 ## Current Business Question
-The team wants a reusable workflow for drafting referral-analysis presentations without copying stale claims from prior decks. The deck should show how to preserve executive storytelling and client formatting while using only approved facts from the current project.
+Develop a reusable workflow for generating referral-analysis presentations without carrying over outdated claims or metrics from historical decks. The story should explain the scale and structure of cross-state referrals, highlight where referral activity is concentrated, and translate the analysis into business-development implications.
 
 ## Approved Facts and Numbers
-- This sample context is intentionally light and should be replaced for real engagements.
-- All numeric claims in the final deck must be supplied in this file.
-- The current sample is only intended to prove the workflow end to end.
+- Total cross-state referrals: 26,386.
+- Unique patients in the cross-state referral analysis: 17,525.
+- Unique referring HCPs: 17,334.
+- Unique rendering HCPs: 17,246.
+- Total unique HCPs involved in cross-state referrals: 27,838.
+- Patients referred to multiple states: 4,980, representing 28.42% of unique patients.
+- Cross-state referral pairs among neighbouring states: 11,276, representing 42.73% of total cross-state referrals.
+- Cross-state referral pairs among non-neighbouring states: 15,110, representing 57.27% of total cross-state referrals.
+- Cross-state pairs with fewer than 5 referrals: 881.
+- Non-neighbour cross-state pairs with fewer than 5 referrals: 1,771.
 
 ## Patient Funnel or Workflow Summary
-- Patient symptoms trigger the initial care-seeking journey.
-- Referral hand-offs guide movement from generalist to specialist care.
-- Business-development teams need to understand where the current workflow creates leakage or delay.
+- Build the cross-state referral network from approved patient and HCP referral interactions.
+- Quantify total referral volume, unique patients, and HCP participation across states.
+- Separate neighbouring versus non-neighbouring referral pairs to understand how much referral activity occurs outside expected geographic adjacency.
+- Identify the highest-volume state pairs and use them to illustrate where referral flows are structurally concentrated.
+- Translate those referral patterns into business-development implications and prioritization opportunities.
 
 ## Analytical Outputs Available
-- Historical referral decks for style analysis only.
-- A local CLI that drafts content_v1 before generating PowerPoint when requested.
-- Reference slide layouts from the client deck that should influence output formatting.
+- Excel file `Cross_State_Referrals_State_level_latest.csv.xlsx` contains the approved cross-state referral summary metrics.
+- The top directional state-pair volumes visible in the workbook include NY to NJ with 413 referrals, NJ to NY with 410 referrals, PA to NJ with 290 referrals, and NJ to PA with 277 referrals.
+- Additional high-volume state pairs include NV to CA with 257 referrals and CA to NV with 234 referrals.
+- The workbook also includes patient counts, HCP counts, and additional referral-event measures for state-pair level analysis.
+- Historical referral decks are available only for narrative structure, talking headers, layout patterns, and client styling.
 
 ## Draft Recommendations or Hypotheses
-- Require a fresh context.txt for every project.
-- Separate style references from claim-bearing project inputs.
-- Review content_v1 only when a user explicitly wants editable intermediate output.
+- Prioritize the largest cross-state corridors first because they represent structurally meaningful referral behavior rather than isolated one-off events.
+- Treat non-neighbouring cross-state referrals as a distinct opportunity area because they represent the majority of cross-state volume.
+- Use the highest-volume state pairs as anchor examples for deeper provider, patient, and network investigation.
+- Keep recommendations tightly tied to approved metrics and avoid unsupported market-level conclusions.
 
 ## Slides to Include or Avoid
-Include an executive summary, workflow slide, analytical insights, and recommendations. Avoid copying exact claims from historical referral decks.
+- Include a polished title slide, agenda, executive summary, methodology/workflow, key insights, deeper analysis, recommendations, and a short conclusion or next-steps slide.
+- Use talking headers that make a business point rather than neutral labels whenever possible.
+- Use the Takeda slide-master feel and vary layouts across summary, methodology, chart, and recommendation slides.
+- Avoid filler labels such as "add chart here", "placeholder", or generic lorem-style slide language in the final PPT draft.
+- Avoid copying exact claims, numbers, or recommendation wording from historical decks.
 
 ## Constraints / Caveats
-- This starter file does not contain approved project metrics.
-- Any client-facing deck should replace sample text with validated facts.
+- Do not fabricate or estimate missing values.
+- Use only approved data from this file and the Excel files in `excel_context/`.
+- Never copy business claims or metrics from historical presentations.
+- Historical decks are references for design and storytelling only.
+- `.xlsb` files are not supported; use `.xlsx`, `.csv`, or `.tsv`.
+- If a fact is truly missing, prefer a restrained qualitative statement over an obvious placeholder.
 
 ## Additional Instructions
-Use a different layout feel across title, agenda, executive summary, workflow, and recommendation slides. Stay close to the Takeda client template look and feel.
+- Closely match the Takeda slide master, fonts, colors, and visual style.
+- Use varied layouts across slides to create an engaging presentation while maintaining consistency.
+- The middle slides should feel presentation-ready, not like scaffolding for later completion.
+- Use the Excel-derived metrics directly in the narrative where relevant instead of burying them in generic bullets.
+- Every chart, number, and business claim should be traceable to the approved project data.
+- Any LLM used for this repo should follow these instructions even if the API key or model changes.
+- Every non-title slide should use a talking header that reads like a business takeaway, usually 1-2 lines long rather than 1-2 words.
+- A strong slide title should say what the analysis shows, what changed, or why the point matters in plain client-ready language.
+- Use the historical decks to infer better sequencing, stronger section transitions, richer slide composition, and more thoughtful figure placement.
+- If a placeholder is unavoidable, it must explicitly state what exact fact, chart, recommendation, or sentence is missing so an analyst can replace it quickly.
+- The final draft should feel close to client-ready, with placeholders only where the current approved inputs are genuinely missing.

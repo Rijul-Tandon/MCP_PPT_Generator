@@ -1,56 +1,33 @@
-﻿# Pharma Presentation Agent
+# Pharma Presentation Agent
 
-Local Python CLI for generating pharma business-development PowerPoint drafts from a single `context.txt` file per use case, while using prior client decks only as style and structure references.
+Local Python CLI for generating and refining pharma business-development PowerPoint decks from a structured `context.txt`, optional Excel support files, historical reference decks, and optionally an already-existing presentation that needs improvement.
 
-## What this repo is for
+## What this repo does
 
-This tool helps you create a fresh client-style PowerPoint deck for pharma analytics and business-development work.
+This tool is built for pharma analytics and business-development presentations where we want to:
+- use `context.txt` as the primary source of current approved project facts
+- pull fresh supporting numbers from `excel_context/` on every run
+- learn tone, flow, and layout patterns from historical decks without copying old claims
+- optionally refine an existing PPT instead of drafting a new one from scratch
 
-It is designed around three ideas:
-- `context.txt` is the only file that should contain current-project facts and instructions
-- older client decks are used only for tone, structure, slide-master styling, and layout inspiration
-- the fastest path should be simple: update `context.txt` and run one command to get a `.pptx`
+## Core behavior
 
-## Fastest workflow
+### Claim-bearing inputs
 
-For most use cases, this is all you need:
-
-```powershell
-python main.py run --use-case referral_analysis
-```
-
-That command:
-- reads `context/Referral_Analysis/context.txt`
-- reads the reference decks in `context/Referral_Analysis/reference_decks/`
-- uses Gemini if the API key is configured
-- builds the final `.pptx`
-- by default keeps only the `.pptx` in `output/`
-
-## How the tool thinks about sources
-
-### Claim-bearing source
-
-This is the only place current project facts should come from:
+These are allowed to drive facts, numbers, recommendations, and project-specific statements:
 - `context/<Use_Case>/context.txt`
+- approved files inside `context/<Use_Case>/excel_context/`
+- optional user edits to `content_v1.json`
 
-Examples:
-- approved numbers
-- current business question
-- patient funnel
-- recommendations
-- constraints
+### Style/reference inputs
 
-### Style-only source
+These help with structure and presentation style only:
+- historical decks in `reference_decks/`
+- an optional existing PPT passed through `--existing-pptx`
 
-These are not treated as truth for the new project:
-- old client `.pptx` files in `reference_decks/`
-
-They are used for:
-- slide flow
-- storytelling style
-- wording tone
-- client master/theme inheritance
-- layout family selection
+Important rule:
+- old decks can influence flow, visual rhythm, and layout style
+- old decks must not be reused as factual sources for current metrics or business claims
 
 ## Repo structure
 
@@ -59,16 +36,19 @@ context/
   Referral_Analysis/
     context.txt
     reference_decks/
+    excel_context/
     assets/
     notes/
   Segmentation/
     context.txt
     reference_decks/
+    excel_context/
     assets/
     notes/
   Patient_Event_Prediction/
     context.txt
     reference_decks/
+    excel_context/
     assets/
     notes/
 output/
@@ -81,82 +61,34 @@ README.md
 .gitignore
 ```
 
-## What each file and folder does
-
-### Root files
+## Important files
 
 - `main.py`
-  Thin entrypoint. You run this file for all commands.
-
-- `requirements.txt`
-  Python dependencies for the repo.
-
-- `.env.example`
-  Example environment file showing how to provide `GEMINI_API_KEY`.
-
-- `.gitignore`
-  Prevents local-only folders and secrets from being committed.
-
-- `README.md`
-  This guide.
-
-### Source code
+  Entry point for all commands.
 
 - `src/pharma_agent/cli.py`
-  Defines the commands: `list-use-cases`, `plan`, `build`, and `run`.
-
-- `src/pharma_agent/planning.py`
-  Main orchestration logic. Reads context, validates it, selects template decks, creates the intermediate content plan, and triggers PPT generation.
-
-- `src/pharma_agent/presentation_builder.py`
-  Creates the final PowerPoint using `python-pptx`, while inheriting the selected client deck's slide master and using different layout patterns.
+  Command-line interface for `list-use-cases`, `plan`, `build`, and `run`.
 
 - `src/pharma_agent/context_manager.py`
-  Reads and validates `context.txt`. Also resolves whether JSON sidecar outputs should be kept.
+  Loads `context.txt`, parses sections, validates required fields, and discovers Excel files.
+
+- `src/pharma_agent/excel_context.py`
+  Reads Excel/CSV/TSV files and creates runtime context that is regenerated every time the tool runs.
 
 - `src/pharma_agent/pptx_reference.py`
-  Extracts text and style cues from older decks in `reference_decks/`.
+  Extracts slide text and style patterns from reference decks and existing decks.
+
+- `src/pharma_agent/planning.py`
+  Main orchestration flow. Builds the runtime context, prepares the prompt, drafts the slide plan, and decides whether the run is a new build or a refinement pass.
+
+- `src/pharma_agent/presentation_builder.py`
+  Writes PowerPoint output. It supports both brand-new deck generation and true in-place refinement of an existing deck.
 
 - `src/pharma_agent/llm.py`
-  Handles Gemini API access through environment variables or `.env`.
-
-- `src/pharma_agent/models.py`
-  Shared data structures used across the app.
-
-### Context folders
-
-Each use case under `context/` is a working area.
-
-- `context.txt`
-  The main file you should edit for each new project.
-
-- `reference_decks/`
-  Old client decks that help the tool inherit structure and style.
-
-- `assets/`
-  Currently optional and unused by the app. Keep future charts, screenshots, or images here if you want a place for them.
-
-- `notes/`
-  Currently optional and unused by the app. Keep supporting notes or raw thinking here if useful.
-
-### Output folder
-
-- `output/`
-  Stores generated artifacts.
-
-Default behavior:
-- only the final `.pptx` is kept
-
-Optional behavior when JSON output is enabled:
-- `content_v1.json`
-- `content_v1.md`
-- `trace.json`
-- final `.pptx`
-
-### Tests
+  Minimal provider wrapper for Groq and Gemini.
 
 - `tests/test_context_validation.py`
-  Basic checks for use-case discovery, context validation, and content-plan generation.
+  Lightweight regression coverage for validation and runtime Excel context behavior.
 
 ## Setup
 
@@ -178,32 +110,37 @@ python -m venv bd_venv
 pip install -r requirements.txt
 ```
 
-## Gemini API key setup
+## LLM provider setup
 
-Preferred option:
+Preferred example using Groq:
 
 ```powershell
-$env:GEMINI_API_KEY="your-gemini-key"
+$env:GROQ_API_KEY="your-groq-key"
 ```
 
-Optional local file:
+Optional local `.env` example:
 
 ```text
-GEMINI_API_KEY=your-gemini-key
-```
+LLM_PROVIDER=groq
+GROQ_API_KEY=your-groq-key
+GROQ_MODEL=llama-3.3-70b-versatile
 
-Place that in a local `.env` file in the repo root.
+or
+
+GEMINI_API_KEY=your-gemini-key
+GEMINI_MODEL=gemini-2.0-flash
+```
 
 Notes:
 - `.env` is ignored by git
 - `.env.example` is only a sample
-- do not commit a real API key
+- do not commit a real key
 
 ## How to prepare `context.txt`
 
-Every new project should be driven by one `context.txt` file.
+Every project should be driven by a strong `context.txt`.
 
-Important fields:
+Important sections:
 - `Project Name`
 - `Client / Brand / Indication`
 - `Use-Case Type`
@@ -221,15 +158,34 @@ Important fields:
 - `Constraints / Caveats`
 - `Additional Instructions`
 
-### Most important practical rule
+Best practice:
+- put every approved current-project claim into `context.txt` or `excel_context/`
+- do not expect the model to infer missing business facts
+- use `Additional Instructions` to enforce client-specific writing style, talking headers, or slide behavior
 
-If a fact should appear in the deck, put it in `context.txt`.
+## How `excel_context/` works
 
-Do not assume the model should infer:
-- numbers
-- recommendations
-- current patient funnel details
-- brand-specific conclusions
+Supported formats:
+- `.xlsx`
+- `.csv`
+- `.tsv`
+
+Current behavior:
+- the tool scans a small number of rows from each file
+- builds numeric and text samples
+- appends those findings into a runtime Excel context block on every run
+- feeds that runtime block into planning without modifying `context.txt` on disk
+
+This means:
+- Excel-derived facts are refreshed dynamically each time a PPT is created
+- users do not need to manually copy spreadsheet content into `context.txt` for every update
+
+Best use cases:
+- KPI tables
+- state/country rankings
+- patient funnel counts
+- HCP or segment counts
+- model outputs exported to Excel/CSV
 
 ## Commands
 
@@ -239,150 +195,106 @@ Do not assume the model should infer:
 python main.py list-use-cases
 ```
 
-### Run end-to-end and keep only the PPT
-
-This is the recommended default command.
+### Generate a deck end to end
 
 ```powershell
 python main.py run --use-case referral_analysis
 ```
 
-Use this when:
-- your `context.txt` is already strong
-- you want the simplest workflow
-- you do not want extra intermediate files
-
-### Generate editable intermediate files
-
-Use this when you want to inspect or manually edit the structure before building the deck.
+### Generate `content_v1` for review before PPT build
 
 ```powershell
 python main.py plan --use-case referral_analysis --generate-json-output
 ```
 
-This creates:
-- `content_v1.json`
-- `content_v1.md`
-
-### Build from an edited JSON file
+### Build from an edited `content_v1.json`
 
 ```powershell
 python main.py build --content output\<timestamp>_referral_analysis_content_v1.json --generate-json-output
 ```
 
-Use this when:
-- you edited the intermediate JSON manually
-- you want to preserve a trace file too
+## Existing deck refinement
 
-## Recommended ways to use the repo
+### Refine an already-existing deck
 
-### Mode 1: Fast production path
+Use this when someone has already made a PPT and you want the agent to improve it using current project context.
 
-Best when you already know what you want.
+```powershell
+python main.py run --use-case referral_analysis --existing-pptx "C:\path\to\existing_deck.pptx" --output-pptx "C:\path\to\refined_deck.pptx"
+```
+
+What happens in refinement mode:
+- the existing deck is read as an input artifact
+- its slide text and style patterns are extracted
+- the planner uses that as refinement context
+- the builder updates existing slides in place where possible
+- if the new outline is longer than the old deck, new slides are added at the end
+
+### Review the refined plan before touching the PPT
+
+```powershell
+python main.py plan --use-case referral_analysis --existing-pptx "C:\path\to\existing_deck.pptx" --generate-json-output
+```
+
+This is the safest flow when:
+- the existing deck has sensitive client wording
+- you want to review changed talking headers first
+- you want to manually edit `content_v1.json` before writing back to the PPT
+
+## Recommended usage patterns
+
+### Mode 1: Fast new-deck generation
 
 1. Update `context/<Use_Case>/context.txt`
-2. Run `python main.py run --use-case <use_case>`
-3. Open the generated `.pptx`
-4. Make final manual polish edits in PowerPoint if needed
+2. Add or update files in `excel_context/`
+3. Run `python main.py run --use-case <use_case>`
+4. Review the generated PPT
 
-### Mode 2: Review before PPT
+### Mode 2: Plan first, then build
 
-Best when the story is still evolving.
-
-1. Set `Generate JSON Output` to `true` in `context.txt` or pass `--generate-json-output`
-2. Run `python main.py plan --use-case <use_case> --generate-json-output`
-3. Review `content_v1.md` or edit `content_v1.json`
+1. Run `python main.py plan --use-case <use_case> --generate-json-output`
+2. Review `content_v1.md`
+3. Optionally edit `content_v1.json`
 4. Run `python main.py build --content <content_v1.json> --generate-json-output`
 
-### Mode 3: Use a different context file
+### Mode 3: Refine an existing deck
 
-Useful if you want project-specific files outside the default folder.
+1. Prepare `context.txt` and `excel_context/`
+2. Run `python main.py plan --use-case <use_case> --existing-pptx <deck> --generate-json-output`
+3. Review the proposed structure and slide language
+4. Run `python main.py run --use-case <use_case> --existing-pptx <deck> --output-pptx <refined deck>`
 
-```powershell
-python main.py run --use-case referral_analysis --context C:\path\to\context.txt
-```
+## What the agent is trying to do well
 
-## Understanding outputs
+- use talking headers instead of weak one-word slide titles
+- build a story that feels close to client-ready
+- use spreadsheet facts dynamically on each run
+- preserve the spirit of an existing client deck when refining
+- keep style influence and factual influence separate
 
-### Default output
+## Troubleshooting
 
-- `output/<timestamp>_<use_case>_deck.pptx`
+- If the CLI prints `Generation mode: groq` or `Generation mode: gemini`, the outline came from the live provider.
+- If the CLI prints `Generation mode: offline`, check `Generation message` immediately below it.
+- If `Generation message` mentions `HTTP 429`, the provider key was recognized but quota or billing blocked the request.
+- If `Generation message` says no provider key was configured, set `GROQ_API_KEY` or `GEMINI_API_KEY` and retry.
+- If `Generation message` mentions a connection error, the tool could not reach the provider endpoint from the current environment.
 
-### Optional outputs
+## Limitations
 
-- `content_v1.json`
-  Structured editable plan of the presentation.
+- Excel ingestion is still summary-based; it does not build final charts directly from spreadsheets.
+- Existing deck refinement is conservative: it updates text-bearing regions in place and preserves slide shells, but it does not yet intelligently remap every original shape with perfect semantic understanding.
+- If the refined outline is shorter than the existing deck, trailing old slides are currently left unchanged and a warning is added.
+- `.xlsb` is not supported.
+- Layout fidelity still depends on the quality and consistency of the reference deck or existing deck.
+- If no live LLM provider is available, the tool falls back to deterministic offline drafting.
 
-- `content_v1.md`
-  Human-readable Markdown rendering of the same plan.
+## Full-potential workflow
 
-- `trace.json`
-  Provenance file showing which slide pieces came from project context vs style reference.
-
-## How to read the Markdown output locally
-
-If you generate `content_v1.md`, the easiest way to render it locally is with VS Code.
-
-Open it:
-
-```powershell
-code output\your_file.md
-```
-
-Then in VS Code:
-- `Ctrl+Shift+V` for preview
-- or `Ctrl+K` then `V` for side-by-side preview
-
-## Slide master and formatting behavior
-
-- The builder uses the `Template Deck` specified in `context.txt`
-- If `Template Deck` is blank, it falls back to the first deck in `reference_decks/`
-- The output presentation inherits the client deck's slide master by starting from that deck template
-- Different slide archetypes use different layout choices and rendering styles
-
-Current archetypes include:
-- title
-- agenda
-- executive summary
-- framework
-- patient funnel
-- insight
-- recommendation
-- appendix
-
-So the output should not look like the same slide repeated over and over.
-
-## About the extra folders
-
-- `.agents/` and `.codex/`
-  These are Codex/workspace metadata folders, not part of the app logic. They are ignored in git.
-
-- `assets/` and `notes/` inside each use case
-  These are optional placeholders. The current app does not require them, but they are there in case you want to store visuals or supporting notes beside a use case.
-
-## Current limitations
-
-- The tool does not yet extract charts or tables directly from Excel
-- Generated visuals are placeholders, not final analytics charts
-- Layout fidelity depends on how reusable the selected client template deck is
-- If Gemini is unavailable, the tool falls back to a deterministic offline draft mode
-
-## Sanity-check commands
-
-Run tests:
-
-```powershell
-python -m unittest discover -s tests -v
-```
-
-See use cases:
-
-```powershell
-python main.py list-use-cases
-```
-
-Generate a deck quickly:
-
-```powershell
-python main.py run --use-case referral_analysis
-```
+For the best results:
+1. Write a strong `context.txt` with approved claims and clear instructions.
+2. Keep `excel_context/` current so spreadsheet facts refresh automatically.
+3. If refining, pass the real client deck with `--existing-pptx`.
+4. Use `plan --generate-json-output` when quality matters more than speed.
+5. Review `content_v1.md` or `content_v1.json` before the final write-back for important decks.
+6. Treat the final output as a strong draft, then do final client polish in PowerPoint if needed.

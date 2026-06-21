@@ -9,6 +9,14 @@ from .models import DeckContextChunk, StylePattern
 
 
 class PptxReferenceLibrary:
+    """Extract lightweight structure and wording clues from PowerPoint decks.
+
+    We use this for two related jobs:
+    1. Reference decks: derive tone, common slide patterns, and likely layouts.
+    2. Existing decks: extract slide text so the agent can refine the current deck
+       instead of inventing a totally new story.
+    """
+
     def __init__(self, reference_dir: Path) -> None:
         self.reference_dir = reference_dir
 
@@ -18,6 +26,7 @@ class PptxReferenceLibrary:
         return sorted(self.reference_dir.glob("*.pptx"))
 
     def extract_pptx_text(self, deck_path: Path) -> list[DeckContextChunk]:
+        """Read slide XML directly to avoid spinning up PowerPoint automation."""
         chunks: list[DeckContextChunk] = []
         with ZipFile(deck_path) as archive:
             slide_names = sorted(
@@ -30,11 +39,10 @@ class PptxReferenceLibrary:
                 clean_text = " ".join(self._clean_xml_text(text) for text in text_runs).strip()
                 if not clean_text:
                     continue
-                slide_number = self._slide_sort_key(slide_name)
                 chunks.append(
                     DeckContextChunk(
                         sourceFile=deck_path.name,
-                        slideNumber=slide_number,
+                        slideNumber=self._slide_sort_key(slide_name),
                         text=clean_text,
                         tags=self._infer_tags(clean_text),
                     )
@@ -60,70 +68,33 @@ class PptxReferenceLibrary:
             has_persona |= "persona" in lowered or "hcp" in lowered
             has_recommendation |= "recommendation" in lowered or "engagement" in lowered
 
-        common_titles = [title for title, _ in title_counter.most_common(6)]
         patterns = [
             StylePattern(
                 sectionType="narrative",
-                commonTitles=common_titles,
+                commonTitles=[title for title, _ in title_counter.most_common(6)],
                 toneNotes="Use concise executive headlines followed by evidence-based support.",
                 layoutHints="Favor one takeaway headline with 3-4 supporting bullets and a visual callout.",
             )
         ]
         if has_agenda:
-            patterns.append(
-                StylePattern(
-                    sectionType="agenda",
-                    commonTitles=["Focus of the conversation today", "Agenda"],
-                    toneNotes="Set expectations early and group the story into clear modules.",
-                    layoutHints="Use an agenda slide near the beginning with short section names.",
-                )
-            )
+            patterns.append(StylePattern("agenda", ["Focus of the conversation today", "Agenda"], "Set expectations early and group the story into clear modules.", "Use an agenda slide near the beginning with short section names."))
         if has_exec_summary:
-            patterns.append(
-                StylePattern(
-                    sectionType="executive_summary",
-                    commonTitles=["Executive Summary"],
-                    toneNotes="Lead with the decision and summarize supporting themes.",
-                    layoutHints="Open each section with a summary slide before the evidence slides.",
-                )
-            )
+            patterns.append(StylePattern("executive_summary", ["Executive Summary"], "Lead with the decision and summarize supporting themes.", "Open each section with a summary slide before the evidence slides."))
         if has_geo:
-            patterns.append(
-                StylePattern(
-                    sectionType="geography",
-                    commonTitles=["Regional Care Patterns", "Geographic Hotspots"],
-                    toneNotes="Compare regions in terms of concentration, maturity, and opportunity.",
-                    layoutHints="Use a map or ranked table placeholder with 3 insight bullets.",
-                )
-            )
+            patterns.append(StylePattern("geography", ["Regional Care Patterns", "Geographic Hotspots"], "Compare regions in terms of concentration, maturity, and opportunity.", "Use a map or ranked table with 3 insight bullets."))
         if has_persona:
-            patterns.append(
-                StylePattern(
-                    sectionType="persona",
-                    commonTitles=["Persona Landscape", "HCP Personas"],
-                    toneNotes="Frame provider or patient cohorts as operationally distinct segments.",
-                    layoutHints="Use a matrix or grouped chart placeholder with segment-specific implications.",
-                )
-            )
+            patterns.append(StylePattern("persona", ["Persona Landscape", "HCP Personas"], "Frame provider or patient cohorts as operationally distinct segments.", "Use a matrix or grouped chart with segment-specific implications."))
         if has_recommendation:
-            patterns.append(
-                StylePattern(
-                    sectionType="recommendation",
-                    commonTitles=["Recommendations", "Strategic Implications"],
-                    toneNotes="Translate analytics into action and prioritize by business leverage.",
-                    layoutHints="Close with action-oriented bullets and explicit next steps.",
-                )
-            )
+            patterns.append(StylePattern("recommendation", ["Recommendations", "Strategic Implications"], "Translate analytics into action and prioritize by business leverage.", "Close with action-oriented bullets and explicit next steps."))
         return patterns
 
     def summarize_reference_patterns(self) -> dict[str, object]:
         decks = self.list_decks()
         chunks = [chunk for deck in decks for chunk in self.extract_pptx_text(deck)]
-        patterns = self.derive_style_patterns(chunks)
         return {
             "referenceDecks": [deck.name for deck in decks],
             "slideCount": len(chunks),
-            "stylePatterns": [pattern.__dict__ for pattern in patterns],
+            "stylePatterns": [pattern.__dict__ for pattern in self.derive_style_patterns(chunks)],
         }
 
     @staticmethod
@@ -146,13 +117,7 @@ class PptxReferenceLibrary:
 
     @staticmethod
     def _clean_xml_text(text: str) -> str:
-        return (
-            text.replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&#10;", " ")
-            .strip()
-        )
+        return text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", "> ").replace("&#10;", " ").strip()
 
     @staticmethod
     def _slide_sort_key(name: str) -> int:
