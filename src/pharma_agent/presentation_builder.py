@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import json # Used to write output trace logs in JSON format
+from pathlib import Path # Used to resolve paths for templates and output locations
 
 
 class PresentationBuilder:
@@ -45,6 +45,7 @@ class PresentationBuilder:
         trace_path: Path | None = None,
         existing_presentation_path: Path | None = None,
     ) -> list[str]:
+        """Execute the PPTX generation by updating an existing deck or creating a new one."""
         warnings: list[str] = []
         presentation = self._load_presentation(content, existing_presentation_path, warnings)
         trace = self._create_trace_shell(content)
@@ -67,7 +68,83 @@ class PresentationBuilder:
             trace_path.write_text(json.dumps(trace, indent=2), encoding="utf-8")
         return warnings
 
+    def read_structure(self, pptx_path: Path) -> dict:
+        """Reads the exact placeholder layout, titles, and object types of a slide deck to give the AI memory."""
+        presentation = self.Presentation(str(pptx_path))
+        slides_info = []
+        for i, slide in enumerate(presentation.slides):
+            info = {"index": i, "layout": slide.slide_layout.name, "placeholders": [], "shapes": []}
+            for shape in slide.shapes:
+                try:
+                    if shape.is_placeholder:
+                        info["placeholders"].append({
+                            "type": shape.placeholder_format.type,
+                            "name": shape.name
+                        })
+                except Exception:
+                    pass
+                if shape.has_text_frame:
+                    info["shapes"].append({"type": "text", "text": shape.text[:50] + "..." if len(shape.text) > 50 else shape.text})
+                if shape.has_chart:
+                    info["shapes"].append({"type": "chart"})
+                if shape.has_table:
+                    info["shapes"].append({"type": "table"})
+            slides_info.append(info)
+        return {"slideCount": len(slides_info), "slides": slides_info}
+
+    def update_slide(self, pptx_path: Path, slide_index: int, slide_data: dict) -> None:
+        """Edits an existing slide in place based on JSON data."""
+        presentation = self.Presentation(str(pptx_path))
+        if slide_index >= len(presentation.slides) or slide_index < 0:
+            raise ValueError(f"Invalid slide index: {slide_index}")
+        slide = presentation.slides[slide_index]
+        self._refine_slide(slide, slide_data)
+        presentation.save(str(pptx_path))
+
+    def add_chart(self, pptx_path: Path, slide_index: int, chart_type: str, chart_data_dict: dict) -> None:
+        """Injects a native python-pptx chart into a slide's placeholder."""
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE
+        
+        presentation = self.Presentation(str(pptx_path))
+        if slide_index >= len(presentation.slides) or slide_index < 0:
+            raise ValueError(f"Invalid slide index: {slide_index}")
+        slide = presentation.slides[slide_index]
+        
+        chart_data = CategoryChartData()
+        chart_data.categories = chart_data_dict.get("categories", [])
+        for series in chart_data_dict.get("series", []):
+            chart_data.add_series(series["name"], tuple(series["values"]))
+            
+        chart_enum = XL_CHART_TYPE.COLUMN_CLUSTERED
+        if chart_type.lower() == "line":
+            chart_enum = XL_CHART_TYPE.LINE
+        elif chart_type.lower() == "pie":
+            chart_enum = XL_CHART_TYPE.PIE
+        elif chart_type.lower() == "bar":
+            chart_enum = XL_CHART_TYPE.BAR_CLUSTERED
+            
+        placed = False
+        for shape in list(slide.placeholders):
+            try:
+                if shape.placeholder_format.type in (self.PP_PLACEHOLDER.OBJECT, self.PP_PLACEHOLDER.PICTURE, self.PP_PLACEHOLDER.CHART):
+                    x, y, cx, cy = shape.left, shape.top, shape.width, shape.height
+                    slide.shapes.add_chart(chart_enum, x, y, cx, cy, chart_data)
+                    # Remove the placeholder
+                    sp = shape.element
+                    sp.getparent().remove(sp)
+                    placed = True
+                    break
+            except Exception:
+                continue
+                
+        if not placed:
+            slide.shapes.add_chart(chart_enum, self.Inches(2), self.Inches(2), self.Inches(9), self.Inches(5), chart_data)
+            
+        presentation.save(str(pptx_path))
+
     def _load_presentation(self, content: dict, existing_presentation_path: Path | None, warnings: list[str]):
+        """Load the base presentation from an existing file, a template, or start blank."""
         # Refinement mode starts from the existing deck so we can preserve its theme,
         # masters, and layout family.
         if existing_presentation_path and existing_presentation_path.exists():
@@ -84,6 +161,7 @@ class PresentationBuilder:
         return presentation
 
     def _refine_existing_presentation(self, presentation, content: dict, trace: dict, warnings: list[str]) -> None:
+        """Update existing slides with newly planned content in-place."""
         existing_slides = list(presentation.slides)
         slide_payloads = content.get("slides", [])
 
@@ -105,6 +183,7 @@ class PresentationBuilder:
             )
 
     def _refine_slide(self, slide, slide_data: dict) -> None:
+        """Apply outline content to a specific slide, preserving format where possible."""
         self._set_title(slide, slide_data.get("title", "Untitled"), top=0.65, size=24)
 
         blocks = self._build_refinement_blocks(slide_data)
@@ -208,17 +287,49 @@ class PresentationBuilder:
         return slide
 
     def _render_slide(self, slide, slide_data: dict) -> None:
-        archetype = slide_data.get("archetype", "insight")
-        renderers = {
-            "title": self._render_title_slide,
-            "agenda": self._render_agenda_slide,
-            "executive_summary": self._render_exec_summary_slide,
-            "framework": self._render_framework_slide,
-            "patient_funnel": self._render_funnel_slide,
-            "recommendation": self._render_recommendation_slide,
-            "appendix": self._render_appendix_slide,
-        }
-        renderers.get(archetype, self._render_insight_slide)(slide, slide_data)
+        title_text = slide_data.get("title", "Untitled")
+        bullets = slide_data.get("bullets", [])
+        visual_hint = slide_data.get("visualSuggestion", "")
+
+        title_set = False
+        body_set = False
+        visual_set = False
+
+        # STRICTLY use master placeholders to preserve template design
+        for shape in slide.placeholders:
+            try:
+                ph_type = shape.placeholder_format.type
+                
+                if ph_type == self.PP_PLACEHOLDER.TITLE and not title_set:
+                    shape.text = title_text
+                    title_set = True
+                    
+                elif ph_type in (self.PP_PLACEHOLDER.BODY, self.PP_PLACEHOLDER.OBJECT) and not body_set and bullets:
+                    tf = shape.text_frame
+                    tf.clear()
+                    for i, bullet in enumerate(bullets):
+                        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+                        p.text = bullet
+                        p.level = 0
+                    body_set = True
+                    
+                elif ph_type in (self.PP_PLACEHOLDER.PICTURE, self.PP_PLACEHOLDER.CHART, self.PP_PLACEHOLDER.TABLE, self.PP_PLACEHOLDER.OBJECT) and not visual_set and visual_hint:
+                    # If information/chart is missing, inject guided text into the visual placeholder
+                    shape.text = f"[GUIDED VISUAL REQUIRED]\n\n{visual_hint}\n\n(Please replace this placeholder with the appropriate chart/visual from the template.)"
+                    visual_set = True
+            except Exception:
+                continue
+
+        # Fallbacks: If the layout didn't have enough placeholders, we gracefully inject
+        # explicit fallback shapes with guided text so no content is lost.
+        if not title_set:
+            self._set_title(slide, title_text, top=0.5, size=24)
+            
+        if not body_set and bullets:
+            self._add_text_block(slide, 1.0, 1.5, 5.0, 4.0, bullets, 16)
+            
+        if not visual_set and visual_hint:
+            self._add_visual_placeholder(slide, 6.5, 1.5, 5.0, 4.0, visual_hint)
 
     def _choose_layout(self, presentation, slide_data: dict):
         preferred_names = {

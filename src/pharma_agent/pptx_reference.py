@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import re
-from collections import Counter
-from pathlib import Path
-from zipfile import ZipFile
+import re # Used to extract text using regular expressions from raw XML
+from collections import Counter # Used to tally common phrases and find recurring patterns
+from pathlib import Path # Used to iterate over directory paths
+from zipfile import ZipFile # Used to open .pptx files as archives and extract their XML content directly
 
-from .models import DeckContextChunk, StylePattern
+from .models import DeckContextChunk, StylePattern # Models for storing extracted slides and derived styles
 
 
 class PptxReferenceLibrary:
@@ -21,6 +21,7 @@ class PptxReferenceLibrary:
         self.reference_dir = reference_dir
 
     def list_decks(self) -> list[Path]:
+        """List all the .pptx files available in the reference directory."""
         if not self.reference_dir.exists():
             return []
         return sorted(self.reference_dir.glob("*.pptx"))
@@ -50,6 +51,7 @@ class PptxReferenceLibrary:
         return chunks
 
     def derive_style_patterns(self, chunks: list[DeckContextChunk]) -> list[StylePattern]:
+        """Analyze raw slide chunks to detect recurring topics, layouts, and storytelling formats."""
         title_counter: Counter[str] = Counter()
         has_exec_summary = False
         has_agenda = False
@@ -89,6 +91,7 @@ class PptxReferenceLibrary:
         return patterns
 
     def summarize_reference_patterns(self) -> dict[str, object]:
+        """Extract chunks from all available reference decks and summarize their styles."""
         decks = self.list_decks()
         chunks = [chunk for deck in decks for chunk in self.extract_pptx_text(deck)]
         return {

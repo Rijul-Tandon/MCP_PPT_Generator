@@ -7,10 +7,10 @@ This module exists so that every other part of the system can work with a clean,
 normalized view of that file instead of re-parsing free text repeatedly.
 """
 
-import re
-from pathlib import Path
+import re # Used for regular expressions to parse sections from markdown text
+from pathlib import Path # Used for reliable file and directory path manipulations
 
-from .models import ContextValidationResult, UseCaseDescriptor
+from .models import ContextValidationResult, UseCaseDescriptor # Data structures for returning validation state and use case metadata
 
 
 # `SECTION_LABELS` maps our normalized internal keys back to friendly names shown
@@ -176,6 +176,7 @@ class ContextManager:
         return sections.get("generate json output", "false").strip().lower() in {"true", "yes", "1"}
 
     def _find_missing_sections(self, sections: dict[str, str]) -> list[str]:
+        """Identify required sections that are missing or completely empty."""
         missing: list[str] = []
         for key in REQUIRED_SECTIONS:
             if not sections.get(key, "").strip():
@@ -201,6 +202,7 @@ class ContextManager:
         return warnings
 
     def _recommended_section_warnings(self, sections: dict[str, str]) -> list[str]:
+        """Generate warnings if recommended (but non-blocking) sections are missing."""
         warnings: list[str] = []
         for key in RECOMMENDED_SECTIONS:
             if not sections.get(key, "").strip():
@@ -208,6 +210,7 @@ class ContextManager:
         return warnings
 
     def _slide_count_warnings(self, slide_count: str) -> list[str]:
+        """Validate that the slide count is a properly formatted positive integer."""
         if not slide_count:
             return []
         try:
@@ -227,11 +230,13 @@ class ContextManager:
         return []
 
     def _template_warnings(self, template_deck: str) -> list[str]:
+        """Warn if a template deck is not specified, as the system will use a default."""
         if template_deck:
             return []
         return ["Template Deck is blank. The tool will fall back to the first deck in reference_decks/."]
 
     def _json_flag_warnings(self, generate_json: str) -> list[str]:
+        """Warn if the generate JSON flag is provided in an unexpected format."""
         if generate_json in {"true", "false", "yes", "no", "1", "0", ""}:
             return []
         return ["Generate JSON Output should be true or false."]

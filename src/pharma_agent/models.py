@@ -10,9 +10,9 @@ When a teammate wants to understand what information moves through the system,
 this is the best place to start.
 """
 
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Any
+from dataclasses import asdict, dataclass, field # Used to easily define and serialize data-holding classes
+from pathlib import Path # Used to handle file path objects when converting them to dictionary/JSON format
+from typing import Any # Used to type-hint arbitrary incoming data types for serialization
 
 
 @dataclass
