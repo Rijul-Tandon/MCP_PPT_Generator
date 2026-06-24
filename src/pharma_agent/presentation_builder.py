@@ -68,80 +68,12 @@ class PresentationBuilder:
             trace_path.write_text(json.dumps(trace, indent=2), encoding="utf-8")
         return warnings
 
-    def read_structure(self, pptx_path: Path) -> dict:
-        """Reads the exact placeholder layout, titles, and object types of a slide deck to give the AI memory."""
-        presentation = self.Presentation(str(pptx_path))
-        slides_info = []
-        for i, slide in enumerate(presentation.slides):
-            info = {"index": i, "layout": slide.slide_layout.name, "placeholders": [], "shapes": []}
-            for shape in slide.shapes:
-                try:
-                    if shape.is_placeholder:
-                        info["placeholders"].append({
-                            "type": shape.placeholder_format.type,
-                            "name": shape.name
-                        })
-                except Exception:
-                    pass
-                if shape.has_text_frame:
-                    info["shapes"].append({"type": "text", "text": shape.text[:50] + "..." if len(shape.text) > 50 else shape.text})
-                if shape.has_chart:
-                    info["shapes"].append({"type": "chart"})
-                if shape.has_table:
-                    info["shapes"].append({"type": "table"})
-            slides_info.append(info)
-        return {"slideCount": len(slides_info), "slides": slides_info}
+    # ── Methods removed in XML-native refactor ─────────────────────────────
+    # read_structure, update_slide, add_chart, add_table, add_floating_textbox
+    # were replaced by ppt_server.get_slide_xml / write_slide_xml /
+    # write_slide_chart_xml which work directly on OOXML inside the ZIP.
+    # ────────────────────────────────────────────────────────────────────────
 
-    def update_slide(self, pptx_path: Path, slide_index: int, slide_data: dict) -> None:
-        """Edits an existing slide in place based on JSON data."""
-        presentation = self.Presentation(str(pptx_path))
-        if slide_index >= len(presentation.slides) or slide_index < 0:
-            raise ValueError(f"Invalid slide index: {slide_index}")
-        slide = presentation.slides[slide_index]
-        self._refine_slide(slide, slide_data)
-        presentation.save(str(pptx_path))
-
-    def add_chart(self, pptx_path: Path, slide_index: int, chart_type: str, chart_data_dict: dict) -> None:
-        """Injects a native python-pptx chart into a slide's placeholder."""
-        from pptx.chart.data import CategoryChartData
-        from pptx.enum.chart import XL_CHART_TYPE
-        
-        presentation = self.Presentation(str(pptx_path))
-        if slide_index >= len(presentation.slides) or slide_index < 0:
-            raise ValueError(f"Invalid slide index: {slide_index}")
-        slide = presentation.slides[slide_index]
-        
-        chart_data = CategoryChartData()
-        chart_data.categories = chart_data_dict.get("categories", [])
-        for series in chart_data_dict.get("series", []):
-            chart_data.add_series(series["name"], tuple(series["values"]))
-            
-        chart_enum = XL_CHART_TYPE.COLUMN_CLUSTERED
-        if chart_type.lower() == "line":
-            chart_enum = XL_CHART_TYPE.LINE
-        elif chart_type.lower() == "pie":
-            chart_enum = XL_CHART_TYPE.PIE
-        elif chart_type.lower() == "bar":
-            chart_enum = XL_CHART_TYPE.BAR_CLUSTERED
-            
-        placed = False
-        for shape in list(slide.placeholders):
-            try:
-                if shape.placeholder_format.type in (self.PP_PLACEHOLDER.OBJECT, self.PP_PLACEHOLDER.PICTURE, self.PP_PLACEHOLDER.CHART):
-                    x, y, cx, cy = shape.left, shape.top, shape.width, shape.height
-                    slide.shapes.add_chart(chart_enum, x, y, cx, cy, chart_data)
-                    # Remove the placeholder
-                    sp = shape.element
-                    sp.getparent().remove(sp)
-                    placed = True
-                    break
-            except Exception:
-                continue
-                
-        if not placed:
-            slide.shapes.add_chart(chart_enum, self.Inches(2), self.Inches(2), self.Inches(9), self.Inches(5), chart_data)
-            
-        presentation.save(str(pptx_path))
 
     def _load_presentation(self, content: dict, existing_presentation_path: Path | None, warnings: list[str]):
         """Load the base presentation from an existing file, a template, or start blank."""
